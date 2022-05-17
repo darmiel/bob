@@ -24,6 +24,18 @@ func WithLineSeparator(sep string) Option {
 	}
 }
 
+func WithSeparator(sep string) Option {
+	return func(b *Builder) {
+		b.sep = bobWriteAllOptionSeparator(sep)
+	}
+}
+
+func WithNewLine() Option {
+	return func(b *Builder) {
+		b.nl = true
+	}
+}
+
 func New(options ...Option) *Builder {
 	b := new(Builder)
 	for _, o := range options {
@@ -125,15 +137,11 @@ func WriteWithNewLine() bobWriteAllOptionNewLine {
 
 func (b *Builder) WriteAll(data ...interface{}) *Builder {
 	var (
-		sep bobWriteAllOptionSeparator
-		nl  bobWriteAllOptionNewLine
+		sep = b.sep
+		nl  = b.nl
 	)
+	a := false
 	for _, d := range data {
-		// write separator
-		if sep != "" && b.Len() > 0 {
-			b.Builder.WriteString(string(sep))
-		}
-
 		// options
 		switch t := d.(type) {
 		case bobWriteAllOptionSeparator:
@@ -144,12 +152,18 @@ func (b *Builder) WriteAll(data ...interface{}) *Builder {
 			continue
 		}
 
+		// write separator
+		if sep != "" && a {
+			b.Builder.WriteString(string(sep))
+		}
+		a = true
+
 		// write data
 		b.WriteAny(d)
 	}
 
 	if nl {
-		b.Builder.WriteRune('\n')
+		b.WriteNewLine()
 	}
 	return b
 }
