@@ -2,33 +2,32 @@
 
 A simple wrapper for [strings.Builder](https://pkg.go.dev/strings#Builder) with some (more or less) useful methods.
 
-## Differences from strings.Builder
-
-### Method Chaining Pattern
-
-**⚠️ NOTE:** Doesn't implement [io.StringWriter](https://pkg.go.dev/io#StringWriter)
-or [io.Writer](https://pkg.go.dev/io#Writer) interface anymore.
-
-**bob.Builder**
-
 ```go
-var b bob.Builder
-b.WriteString("Hello").WriteString(" ").WriteString("World")
-fmt.Println(b.String()) // Hello World
+name := "bob"
+age := 42
+fmt.Println(bob.Writes(bob.WriteWithSpace, "My name is", name, "and I am", age, "years old").String())
 ```
 
-> **strings.Builder**
-> ```go
-> var b strings.Builder
-> b.WriteString("Hello")
-> b.WriteString(" ")
-> b.WriteString("World")
-> fmt.Println(b.String()) // Hello World
-> ```
+## Differences from `strings.Builder`
+
+### Method Chaining
+
+Bob allows you to call multiple methods on top of each other:
+
+```go
+fmt.Println(bob.WriteString("Hello").
+    WriteRune(' ').
+    WriteString("World").
+    String()) // Hello World
+```
+
+**NOTE:** Because of this change, `bob` doesn't implement the [io.StringWriter](https://pkg.go.dev/io#StringWriter)
+or [io.Writer](https://pkg.go.dev/io#Writer) interface anymore.
+
 
 ### `WriteAny(any)`
 
-Accepts any data and tries to convert to string:
+Accepts any object and tries to convert to string using one of the following methods:
 
 | Type         | Method                                |
 |--------------|---------------------------------------|
@@ -39,60 +38,53 @@ Accepts any data and tries to convert to string:
 | string       | `strings.Builder.WriteString(string)` |
 | any          | `fmt.Sprintf("%+v", any)`             |
 
-### `WriteAll(...interface{})`
+### `Writes(...interface{})`
 
 ```go
-var (
-    Name = "Bob"
-    Age = 1337
-	
-    b bob.Builder
-)
-b.WriteAll(bob.WriteWithSeparator(" "), "Hello my name is", Name, "and I'm", Age, "years old")
+name := "bob"
+age := 42
+fmt.Println(bob.Writes(bob.WriteWithSpace, "My name is", name, "and I am", age, "years old").String())
 ```
 
 #### Modify
 
-By default, there is no separator between arguments. You can change this behavior using `bob.WriteWithSeparator(" ")`:
+By default, there is no separator between arguments. 
+You can change this behavior using `bob.WriteWithSeparator(<separator>)` or using one of the predefined separators:
+
+- `bob.WriteWithNone`: abc
+- `bob.WriteWithSpace`: a b c
+- `bob.WriteWithComma`: a,b,c
+- `bob.WriteWithTab`: a\tb\tc
 
 ```go
-var b bob.Builder
-b.WriteAll(
-	bob.WriteWithSeparator("+"), "This", "Is", 
-	bob.WriteWithSeparator(" "), "A", "Test", 
-)
-// This+Is A Test
+bob.Writes(
+    bob.WriteWithSeparator("+"), "This", "Is",
+    bob.WriteWithSeparator(" "), "A", "Test",
+) // This+Is A Test
 ```
-
-> same example using **strings.Builder**
-> ```go
-> var (
->     Name = "Bob"
->     Age = 1337
->	
->     b strings.Builder
-> )
-> b.WriteString("Hello my name is ")
-> b.WriteString(Name)
-> b.WriteString(" and I'm ")
-> b.WriteString(strconv.Itoa(Age))
-> b.WriteString(" years old")
-> ```
 
 ---
 
 ### `WriteNewLine()`
 
-> Alias to `b.WriteString("\n")`
-
-The line separator (`\n`) can be changed using `WithLineSeparator`:
+Adds a new line.
 
 ```go
-b := bob.New(bob.WithLineSeparator("\n\n"))
-b.WriteNewLine()
+fmt.Println(bob.WriteString("Hello").WriteNewLine().WriteString("World").String()) // Hello\nWorld
+```
+
+The default line separator (`\n`) can be changed using `WithLineSeparator`:
+
+```go
+bob.New(bob.WithLineSeparator("\n\n")).
+	WriteString("Hello").
+	WriteNewLine().
+	WriteString("World") // Hello\n\nWorld
 ```
 
 ---
+
+## Aliases
 
 ### `WriteBytesLine([]byte)`
 

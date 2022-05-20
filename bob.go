@@ -2,53 +2,22 @@ package bob
 
 import (
 	"fmt"
-	"strings"
 )
 
-type Builder struct {
-	strings.Builder
+var (
+	WriteWithNone  = WriteWithSeparator("")
+	WriteWithSpace = WriteWithSeparator(" ")
+	WriteWithComma = WriteWithSeparator(",")
+	WriteWithTab   = WriteWithSeparator("\t")
+)
 
-	// WriteNewLine
-	newLine string
-
-	// WriteAll
-	sep bobWriteAllOptionSeparator
-	nl  bobWriteAllOptionNewLine
-}
-
-type Option func(b *Builder)
-
-func WithLineSeparator(sep string) Option {
-	return func(b *Builder) {
-		b.newLine = sep
-	}
-}
-
-func WithSeparator(sep string) Option {
-	return func(b *Builder) {
-		b.sep = bobWriteAllOptionSeparator(sep)
-	}
-}
-
-func WithNewLine() Option {
-	return func(b *Builder) {
-		b.nl = true
-	}
-}
-
-func New(options ...Option) *Builder {
-	b := new(Builder)
-	for _, o := range options {
-		o(b)
-	}
-	return b
-}
-
-// "normal" methods
-
-func (b *Builder) Write(data []byte) *Builder {
+func (b *Builder) WriteBytes(data []byte) *Builder {
 	b.Builder.Write(data)
 	return b
+}
+
+func (b *Builder) Write(data []byte) *Builder {
+	return b.WriteBytes(data)
 }
 
 func (b *Builder) WriteRune(r rune) *Builder {
@@ -66,12 +35,22 @@ func (b *Builder) WriteString(data string) *Builder {
 	return b
 }
 
+func (b *Builder) WriteNewLine() *Builder {
+	var nl string
+	if b.newLine == "" {
+		nl = "\n"
+	} else {
+		nl = b.newLine
+	}
+	b.Builder.WriteString(nl)
+	return b
+}
+
 func (b *Builder) WriteAny(data interface{}) *Builder {
 	if s, ok := data.(fmt.Stringer); ok {
 		b.Builder.WriteString(s.String())
 		return b
 	}
-
 	switch t := data.(type) {
 	case byte:
 		b.Builder.WriteByte(t)
@@ -84,19 +63,6 @@ func (b *Builder) WriteAny(data interface{}) *Builder {
 	default:
 		b.Builder.WriteString(fmt.Sprintf("%+v", t))
 	}
-	return b
-}
-
-// "custom" methods
-
-func (b *Builder) WriteNewLine() *Builder {
-	var nl string
-	if b.newLine == "" {
-		nl = "\n"
-	} else {
-		nl = b.newLine
-	}
-	b.Builder.WriteString(nl)
 	return b
 }
 
@@ -120,22 +86,7 @@ func (b *Builder) WriteAnyLine(data interface{}) *Builder {
 	return b.WriteAny(data).WriteNewLine()
 }
 
-// "all" write
-
-type (
-	bobWriteAllOptionSeparator string
-	bobWriteAllOptionNewLine   bool
-)
-
-func WriteWithSeparator(sep string) bobWriteAllOptionSeparator {
-	return bobWriteAllOptionSeparator(sep)
-}
-
-func WriteWithNewLine() bobWriteAllOptionNewLine {
-	return bobWriteAllOptionNewLine(true)
-}
-
-func (b *Builder) WriteAll(data ...interface{}) *Builder {
+func (b *Builder) Writes(data ...interface{}) *Builder {
 	var (
 		sep = b.sep
 		nl  = b.nl
@@ -144,11 +95,14 @@ func (b *Builder) WriteAll(data ...interface{}) *Builder {
 	for _, d := range data {
 		// options
 		switch t := d.(type) {
-		case bobWriteAllOptionSeparator:
+		case writeAllOptionSeparator:
 			sep = t
 			continue
-		case bobWriteAllOptionNewLine:
+		case writeAllOptionNewLine:
 			nl = t
+			continue
+		case func() *Builder:
+			t()
 			continue
 		}
 
@@ -166,4 +120,8 @@ func (b *Builder) WriteAll(data ...interface{}) *Builder {
 		b.WriteNewLine()
 	}
 	return b
+}
+
+func (b *Builder) Bytes() []byte {
+	return []byte(b.String())
 }
